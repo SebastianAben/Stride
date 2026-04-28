@@ -1,0 +1,10 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// Phase 2 will add Auth.js/NextAuth, Application, ChecklistItem,
+// and ExtensionToken models from cache/data-model.md.
