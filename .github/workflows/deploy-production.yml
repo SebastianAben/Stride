@@ -105,7 +105,7 @@ jobs:
           fi
           echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin
           docker compose --env-file .env.production -f docker-compose.prod.yml pull app
-          docker compose --env-file .env.production -f docker-compose.prod.yml up -d db
+          docker compose --env-file .env.production -f docker-compose.prod.yml up -d --wait db
           mkdir -p backups
           docker compose --env-file .env.production -f docker-compose.prod.yml exec -T db sh -c 'pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB"' > "backups/predeploy-$(date +%Y%m%d%H%M%S).sql"
           docker compose --env-file .env.production -f docker-compose.prod.yml run --rm migrate
