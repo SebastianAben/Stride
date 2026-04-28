@@ -1,0 +1,26 @@
+services:
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-stride}
+      POSTGRES_USER: ${POSTGRES_USER:-stride}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+    ports:
+      - "127.0.0.1:55432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-stride} -d ${POSTGRES_DB:-stride}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - stride_private
+
+volumes:
+  postgres_data:
+
+networks:
+  stride_private:
+    driver: bridge
