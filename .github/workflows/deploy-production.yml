@@ -1,0 +1,119 @@
+name: Deploy Production
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ghcr.io/sebastianaben/stride
+
+jobs:
+  build:
+    name: Build and push image
+    runs-on: ubuntu-latest
+    outputs:
+      image: ${{ steps.image.outputs.image }}
+    env:
+      NEXT_TELEMETRY_DISABLED: "1"
+      DATABASE_URL: postgresql://stride:stride@localhost:5432/stride?schema=public
+      AUTH_SECRET: build-only-secret
+      AUTH_URL: http://localhost:3000
+      NEXTAUTH_URL: http://localhost:3000
+      NEXT_PUBLIC_APP_URL: http://localhost:3000
+      EXTENSION_ALLOWED_ORIGIN: chrome-extension://build
+      EXTENSION_PUBLIC_API_BASE_URL: http://localhost:3000
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: |
+            ${{ env.IMAGE_NAME }}:${{ github.sha }}
+            ${{ env.IMAGE_NAME }}:production-latest
+          build-args: |
+            NEXT_TELEMETRY_DISABLED=1
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Set image output
+        id: image
+        run: echo "image=${IMAGE_NAME}:${GITHUB_SHA}" >> "$GITHUB_OUTPUT"
+
+  deploy:
+    name: Deploy on home server
+    runs-on: [self-hosted, Linux, X64, home-prod, docker]
+    needs: build
+    environment: production
+    env:
+      DEPLOY_PATH: /home/froztbitez/web-server/stride
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Sync deployment files
+        run: |
+          mkdir -p "$DEPLOY_PATH"
+          find "$DEPLOY_PATH" -mindepth 1 \
+            ! -name '.env.production' \
+            ! -name 'backups' \
+            ! -path "$DEPLOY_PATH/backups/*" \
+            -exec rm -rf {} +
+          tar \
+            --exclude='.git' \
+            --exclude='.next' \
+            --exclude='node_modules' \
+            --exclude='.env' \
+            --exclude='.env.*' \
+            -czf /tmp/stride-release.tgz .
+          tar -xzf /tmp/stride-release.tgz -C "$DEPLOY_PATH"
+          rm /tmp/stride-release.tgz
+
+      - name: Deploy image and run migration
+        env:
+          APP_IMAGE: ${{ needs.build.outputs.image }}
+          GHCR_USER: ${{ github.actor }}
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          cd "$DEPLOY_PATH"
+          export APP_IMAGE
+          docker network inspect home_proxy >/dev/null 2>&1 || docker network create home_proxy
+          if docker ps --format '{{.Names}}' | grep -qx nginxproxymanager; then
+            docker network connect home_proxy nginxproxymanager 2>/dev/null || true
+          fi
+          echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin
+          docker compose --env-file .env.production -f docker-compose.prod.yml pull app
+          docker compose --env-file .env.production -f docker-compose.prod.yml up -d db
+          mkdir -p backups
+          docker compose --env-file .env.production -f docker-compose.prod.yml exec -T db sh -c 'pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB"' > "backups/predeploy-$(date +%Y%m%d%H%M%S).sql"
+          docker compose --env-file .env.production -f docker-compose.prod.yml run --rm migrate
+          docker compose --env-file .env.production -f docker-compose.prod.yml up -d app
+          docker image prune -f
+
+      - name: Smoke test
+        run: |
+          cd "$DEPLOY_PATH"
+          docker compose --env-file .env.production -f docker-compose.prod.yml exec -T app \
+            node -e "fetch('http://localhost:3000/api/health/db').then((r) => { if (!r.ok) process.exit(1); return r.text(); }).then(console.log)"
