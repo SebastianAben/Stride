@@ -25,6 +25,7 @@ services:
       - ${ENV_FILE:-.env.production}
     volumes:
       - .:/workspace
+      - migrate_node_modules:/workspace/node_modules
     depends_on:
       db:
         condition: service_healthy
@@ -56,6 +57,7 @@ services:
 
 volumes:
   postgres_data:
+  migrate_node_modules:
 
 networks:
   stride_private:

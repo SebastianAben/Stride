@@ -80,8 +80,7 @@ type ResolvedRuleOptions = Required<Omit<RuleOptions, "today">> & {
   today: Date;
 };
 
-const DEFAULT_OPTIONS: ResolvedRuleOptions = {
-  today: new Date(),
+const DEFAULT_OPTIONS: Required<Omit<RuleOptions, "today">> = {
   deadlineSoonDays: 3,
   savedStaleDays: 7,
   appliedStaleDays: 14,
@@ -358,18 +357,19 @@ export function getBottleneckIndicator(
   applications: RuleApplication[],
   options: RuleOptions = {},
 ): BottleneckIndicator {
-  const insight = getProgressInsight(applications, options);
+  const resolvedOptions = resolveOptions(options);
+  const insight = getProgressInsight(applications, resolvedOptions);
   const activeTotal = insight.activeApplications;
   const savedCount = countStatus(applications, ApplicationStatus.SAVED);
   const appliedCount = countStatus(applications, ApplicationStatus.APPLIED);
   const deadlineSoonCount = applications.filter((application) => {
-    const derived = getDerivedDates(application, resolveOptions(options));
+    const derived = getDerivedDates(application, resolvedOptions);
 
     return (
       application.status === ApplicationStatus.SAVED &&
       derived.daysUntilDeadline !== null &&
       derived.daysUntilDeadline >= 0 &&
-      derived.daysUntilDeadline <= resolveOptions(options).deadlineSoonDays
+      derived.daysUntilDeadline <= resolvedOptions.deadlineSoonDays
     );
   }).length;
 
@@ -422,7 +422,7 @@ function resolveOptions(options: RuleOptions): ResolvedRuleOptions {
   return {
     ...DEFAULT_OPTIONS,
     ...options,
-    today: options.today ?? DEFAULT_OPTIONS.today,
+    today: options.today ?? new Date(),
   };
 }
 
