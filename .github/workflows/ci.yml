@@ -58,9 +58,11 @@ jobs:
       - name: Typecheck
         run: npm run typecheck
 
+      - name: Test
+        run: npm run test
+
       - name: Build Next.js app
         run: npm run build
 
       - name: Validate Docker image build
         run: docker build --tag stride-ci:${{ github.sha }} .
-

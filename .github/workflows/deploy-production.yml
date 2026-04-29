@@ -113,7 +113,10 @@ jobs:
           docker image prune -f
 
       - name: Smoke test
+        env:
+          APP_IMAGE: ${{ needs.build.outputs.image }}
         run: |
           cd "$DEPLOY_PATH"
+          export APP_IMAGE
           docker compose --env-file .env.production -f docker-compose.prod.yml exec -T app \
             node -e "fetch('http://localhost:3000/api/health/db').then((r) => { if (!r.ok) process.exit(1); return r.text(); }).then(console.log)"
