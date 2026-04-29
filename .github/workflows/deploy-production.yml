@@ -79,7 +79,9 @@ jobs:
           find "$DEPLOY_PATH" -mindepth 1 \
             ! -name '.env.production' \
             ! -name 'backups' \
+            ! -name 'node_modules' \
             ! -path "$DEPLOY_PATH/backups/*" \
+            ! -path "$DEPLOY_PATH/node_modules/*" \
             -exec rm -rf {} +
           tar \
             --exclude='.git' \

@@ -1,5 +1,5 @@
 import { ApplicationStatus } from "@prisma/client";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
   getBottleneckIndicator,
@@ -36,6 +36,10 @@ function application(
 }
 
 describe("application SMART rules", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it("recommends applying before a near deadline and marks it high priority", () => {
     const savedApplication = application({
       deadline: daysFromToday(1),
@@ -157,5 +161,23 @@ describe("application SMART rules", () => {
       responseRate: 0,
       interviewRate: 0,
     });
+  });
+
+  it("uses the current system date when today is not provided", () => {
+    const savedApplication = application({
+      deadline: new Date("2026-04-30T12:00:00.000Z"),
+      lastStatusUpdateDate: new Date("2026-04-20T12:00:00.000Z"),
+    });
+
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-04-28T12:00:00.000Z"));
+
+    expect(getNextAction(savedApplication)).toBe("Apply before deadline.");
+
+    vi.setSystemTime(new Date("2026-05-01T12:00:00.000Z"));
+
+    expect(getNextAction(savedApplication)).toBe(
+      "Deadline passed. Update status or archive this job.",
+    );
   });
 });

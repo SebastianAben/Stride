@@ -1,17 +1,20 @@
-const setupItems = [
+const readyCapabilities = [
   "Next.js App Router",
   "TypeScript strict mode",
   "Tailwind CSS",
-  "Prisma foundation",
+  "Prisma and PostgreSQL",
+  "Credentials auth",
+  "SMART rule utilities",
+  "Application management",
   "Extension workspace",
   "Docker build target",
 ];
 
 const nextMilestones = [
-  "Auth and PostgreSQL",
-  "Rule engine",
-  "Application CRUD",
   "Action dashboard",
+  "Kanban and table",
+  "CSV export",
+  "Browser extension",
 ];
 
 export default function Home() {
@@ -28,7 +31,7 @@ export default function Home() {
             </h1>
           </div>
           <div className="rounded-md border border-teal-200 bg-teal-50 px-3 py-2 text-sm font-medium text-teal-800">
-            Phase 1 setup
+            MVP foundation ready
           </div>
         </header>
 
@@ -37,18 +40,19 @@ export default function Home() {
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
                 <h2 className="text-xl font-semibold text-slate-950">
-                  Foundation ready for MVP implementation
+                  Foundation ready for application workflows
                 </h2>
                 <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">
-                  This shell is intentionally focused on setup. Product logic,
-                  auth, database models, dashboard data, and extension behavior
-                  are implemented in the next phases from the cache plan.
+                  The app foundation, authentication, database schema, and
+                  application management workflow are in place. The next
+                  milestone is turning stored applications into dashboard
+                  actions and insights.
                 </p>
               </div>
             </div>
 
             <div className="mt-8 grid gap-3 sm:grid-cols-2">
-              {setupItems.map((item) => (
+              {readyCapabilities.map((item) => (
                 <div
                   className="rounded-md border border-slate-200 bg-slate-50 px-4 py-3"
                   key={item}
@@ -68,14 +72,14 @@ export default function Home() {
               {nextMilestones.map((milestone, index) => (
                 <li className="flex gap-3" key={milestone}>
                   <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-slate-900 text-sm font-semibold text-white">
-                    {index + 2}
+                    {index + 5}
                   </span>
                   <div>
                     <p className="text-sm font-medium text-slate-900">
                       {milestone}
                     </p>
                     <p className="mt-1 text-xs text-slate-500">
-                      Pending according to implementation plan
+                      Next implementation milestone
                     </p>
                   </div>
                 </li>
